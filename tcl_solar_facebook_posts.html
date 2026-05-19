@@ -1,0 +1,370 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: transparent; color: var(--color-text-primary, #111); }
+.container { padding: 1rem 0; max-width: 680px; }
+.tabs { display: flex; border-bottom: 0.5px solid var(--color-border-tertiary, #e0e0e0); margin-bottom: 1.5rem; }
+.tab { padding: 8px 18px; font-size: 14px; cursor: pointer; background: none; border: none; border-bottom: 2px solid transparent; color: var(--color-text-secondary, #666); transition: all 0.15s; }
+.tab.active { border-bottom-color: var(--color-text-primary, #111); color: var(--color-text-primary, #111); font-weight: 500; }
+.hint { font-size: 12px; color: var(--color-text-secondary, #666); margin-bottom: 1rem; line-height: 1.6; }
+.card { background: var(--color-background-primary, #fff); border: 0.5px solid var(--color-border-tertiary, #e0e0e0); border-radius: 12px; margin-bottom: 10px; overflow: hidden; }
+.card-header { padding: 0.875rem 1.25rem; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.card-header:hover { background: var(--color-background-secondary, #f7f7f7); }
+.post-title { font-weight: 500; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.price-tag { font-size: 12px; margin-top: 2px; color: #16a34a; }
+.price-orig { color: var(--color-text-tertiary, #999); text-decoration: line-through; margin-right: 6px; }
+.badge { background: #fee2e2; color: #b91c1c; font-size: 11px; padding: 1px 6px; border-radius: 4px; margin-left: 6px; }
+.card-body { border-top: 0.5px solid var(--color-border-tertiary, #e0e0e0); padding: 1rem 1.25rem; }
+.post-text { background: var(--color-background-secondary, #f7f7f7); border-radius: 8px; padding: 1rem; font-size: 12px; line-height: 1.8; white-space: pre-wrap; font-family: 'Courier New', monospace; margin-bottom: 0.875rem; max-height: 360px; overflow-y: auto; }
+.prompt-box { background: var(--color-background-secondary, #f7f7f7); border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 0.875rem; }
+.prompt-label { font-size: 11px; font-weight: 500; color: var(--color-text-secondary, #666); margin-bottom: 4px; }
+.prompt-text { font-size: 12px; line-height: 1.6; color: var(--color-text-primary, #111); }
+.btn-row { display: flex; gap: 8px; }
+button.action { flex: 1; padding: 8px 12px; font-size: 13px; border: 0.5px solid var(--color-border-secondary, #ccc); border-radius: 8px; background: none; cursor: pointer; color: var(--color-text-primary, #111); }
+button.action:hover { background: var(--color-background-secondary, #f7f7f7); }
+.price-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.price-label { font-size: 12px; color: var(--color-text-secondary, #666); display: block; margin-bottom: 4px; }
+input[type=number] { width: 100%; padding: 8px 10px; font-size: 13px; border: 0.5px solid var(--color-border-secondary, #ccc); border-radius: 8px; background: var(--color-background-primary, #fff); color: var(--color-text-primary, #111); }
+.savings { font-size: 12px; color: #16a34a; margin-top: 8px; }
+.chevron { font-size: 14px; color: var(--color-text-secondary, #888); flex-shrink: 0; transition: transform 0.2s; }
+.chevron.open { transform: rotate(180deg); }
+</style>
+</head>
+<body>
+<div class="container">
+<h2 style="position:absolute;opacity:0">TCL Solar Facebook Post Manager</h2>
+
+<p class="hint">แก้ไขราคาในแท็บ <strong>ตั้งราคา</strong> แล้วดูโพสพร้อมราคาในแท็บ <strong>โพส Facebook</strong> — กด "คัดลอก" เพื่อนำไปโพสได้เลย</p>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('posts',this)">📘 โพส Facebook (10 โพส)</button>
+  <button class="tab" onclick="switchTab('prices',this)">💰 ตั้งราคา</button>
+</div>
+
+<div id="tab-posts"></div>
+<div id="tab-prices" style="display:none"></div>
+</div>
+
+<script>
+const prices = [
+  {id:1, name:"TCL BlueArk X1 8K-SP (Hybrid Inverter 8kW)", orig:0, sale:0},
+  {id:2, name:"TCL BlueArk X1 8.0 BMH (Battery 8kWh+BMS)", orig:0, sale:0},
+  {id:3, name:"TCL BlueArk X1 8.0 BSH (Battery 8kWh)", orig:0, sale:0},
+  {id:4, name:"TCL BlueArk X1 Basement (ฐานแบตเตอรี่)", orig:0, sale:0},
+  {id:5, name:"TCL-GS5K-G1 Inverter 5kW 1 Phase", orig:0, sale:0},
+  {id:6, name:"TCL-BS40-G1 Switch Box 1 Phase", orig:0, sale:0},
+  {id:7, name:"TCL-GT12K-G1 Inverter 12kW 3 Phase", orig:0, sale:0},
+  {id:8, name:"TCL-BT50-G1 Switch Box 3 Phase", orig:0, sale:0},
+  {id:9, name:"แผงโซลาร์เซลล์ TCL 620W (N-type TOPCon)", orig:0, sale:0},
+];
+
+const posts = [
+  {id:1,pid:1,emoji:"⚡",title:"TCL BlueArk X1 8K-SP — Hybrid Inverter 8kW 1 เฟส",
+   body:`🔋 อินเวอร์เตอร์ไฮบริดสำหรับบ้านยุคใหม่ที่อยากเป็นอิสระจากค่าไฟ!
+
+TCL BlueArk X1 8K-SP เป็น All-in-One รวมอินเวอร์เตอร์, UPS และ EMS ไว้ในกล่องเดียว ออกแบบให้ติดตั้งง่าย ดูแลง่าย
+
+✅ ขนาด 8kW 1 เฟส เหมาะบ้านพักอาศัยทุกขนาด
+✅ สลับ On-grid/Off-grid ภายใน 10ms — ไฟไม่ดับแม้กระแสตัด
+✅ 3 MPPT อิสระ รองรับหลังคาหลายทิศทาง
+✅ IP66 กันน้ำ กันฝุ่น ติดตั้งได้ทั้งในและนอกอาคาร
+✅ ต่อแบตเตอรี่ BlueArk ได้ 8–128kWh
+✅ รับประกัน 10 ปี 🛡️
+
+📐 ขนาด: 780×400×260 mm | น้ำหนัก 25 kg
+
+#BlueArkX1 #HybridInverter #โซลาร์บ้าน #TCLSolar`,
+   prompt:"ภาพ: TCL BlueArk X1 inverter unit สีขาว/เทาทันสมัย ติดผนังในบ้านสะอาด มีแสงไฟจากหน้าต่างกระทบอุปกรณ์ โทนสีขาว-น้ำเงิน ดูพรีเมียม มีข้อความ '8kW Hybrid Inverter | 10 Year Warranty' overlay ด้านล่าง สไตล์ product photography"},
+  {id:2,pid:2,emoji:"🔋",title:"TCL BlueArk X1 8.0 BMH — แบตเตอรี่ 8kWh พร้อม BMS",
+   body:`🌙 เก็บพลังงานแสงอาทิตย์ไว้ใช้ตอนกลางคืน — ประหยัดค่าไฟได้อีกเท่าตัว!
+
+แบตเตอรี่ LiFePO4 ความจุ 8kWh พร้อมระบบ BMS ในตัว
+
+✅ LiFePO4 ปลอดภัย ทนทาน ไม่ระเบิด
+✅ รอบชาร์จสูงถึง 8,000 รอบ (อายุใช้งานกว่า 20 ปี)
+✅ ใช้ไฟได้จริง 7.2kWh ต่อรอบ
+✅ มี Fire Suppression Module ป้องกันเพลิงไหม้
+✅ BMS Dual Redundant ป้องกันซ้ำซ้อน 2 ชั้น
+✅ ขยายความจุได้ถึง 128kWh
+✅ รับประกัน 10 ปี 🛡️
+
+📐 ขนาด: 780×270×260 mm | น้ำหนัก 65 kg
+
+#BlueArkX1 #Battery #SolarStorage #TCLSolar`,
+   prompt:"ภาพ: แบตเตอรี่ TCL BlueArk X1 ดีไซน์สีเทาเข้ม ตั้งอยู่ใน utility room มีแสง LED สีฟ้าเรืองรอง แสดงถึงพลังงานสำรอง โทน high-tech แสดงข้อมูล '8kWh | LiFePO4 | 8,000 Cycles' overlay"},
+  {id:3,pid:3,emoji:"➕",title:"TCL BlueArk X1 8.0 BSH — ขยายแบตเตอรี่ เพิ่มพลังงานสำรอง",
+   body:`📈 ระบบพลังงานที่เติบโตได้ตามความต้องการของคุณ!
+
+BlueArk X1 BSH โมดูลขยายแบตเตอรี่ 8kWh สำหรับระบบ BlueArk X1 เดิม
+
+✅ เพิ่มความจุทีละ 8kWh ต่อโมดูล
+✅ ขยายได้ถึง 128kWh รองรับบ้านขนาดใหญ่
+✅ Smart Balancing Technology ผสมแบตใหม่-เก่าได้
+✅ ชาร์จ/จ่ายไฟสูงสุด 4,000W ต่อโมดูล
+✅ IP66 ติดตั้งได้ทั้งใน-นอกอาคาร
+✅ รับประกัน 10 ปี 🛡️
+
+⚠️ หมายเหตุ: BSH ต้องใช้งานคู่กับ BMH เสมอ
+
+📐 ขนาด: 780×270×260 mm | น้ำหนัก 65 kg
+
+#BlueArkX1 #BatteryExpansion #ขยายระบบ #TCLSolar`,
+   prompt:"ภาพ: แบตเตอรี่ TCL BlueArk X1 หลายโมดูลเรียงซ้อนกัน (2-4 units) สีเทาเข้ม มี infographic แสดง 8kWh→16kWh→32kWh→128kWh ลูกศรขยายขึ้น สไตล์ clean tech"},
+  {id:4,pid:4,emoji:"🏗️",title:"TCL BlueArk X1 Basement — ฐานติดตั้งแบตเตอรี่",
+   body:`🔩 ติดตั้งสวย มั่นคง ปลอดภัย — ด้วยฐานรองรับมาตรฐานจาก TCL!
+
+TCL BlueArk X1 Basement ฐานรองสำหรับชุดแบตเตอรี่ BlueArk X1
+
+✅ ออกแบบเฉพาะสำหรับ BlueArk X1
+✅ เพิ่มความมั่นคงและความปลอดภัยของระบบ
+✅ ช่วยให้ระบบดูเรียบร้อยเป็นมืออาชีพ
+✅ รองรับน้ำหนักแบตเตอรี่เต็มชุด
+✅ รวมในราคาชุดแบตเตอรี่ (Battery Base Included)
+
+💼 เหมาะสำหรับการติดตั้งแบบ Floor Standing
+
+#BlueArkX1 #Basement #ติดตั้งโซลาร์ #TCLSolar`,
+   prompt:"ภาพ: ฐาน TCL BlueArk X1 Basement สีเทา/ดำ วางอยู่ในพื้นที่สะอาด มีแบตเตอรี่วางด้านบน แสดงการติดตั้งที่เป็นระเบียบ ภาพ clean minimal สไตล์ showroom"},
+  {id:5,pid:5,emoji:"☀️",title:"TCL-GS5K-G1 — Inverter 5kW 1 เฟส สำหรับบ้าน",
+   body:`💡 เริ่มต้นติดโซลาร์วันนี้ — คืนทุนเร็ว ค่าไฟลดจริง!
+
+TCL-GS5K-G1 อินเวอร์เตอร์ On-grid 5kW รับรองจาก MEA และ PEA ไทย
+
+✅ กำลัง 5kW 1 เฟส เหมาะบ้านใช้ไฟ 500–900 หน่วย/เดือน
+✅ 2 MPPT ออกแบบ string ได้อิสระ
+✅ รองรับแผง Bifacial กระแสสูงสุด 16A
+✅ Shadow Scan ลดผลกระทบจากเงาตกบนแผง
+✅ IP66 ติดตั้งนอกอาคารได้
+✅ Commissioning ผ่าน App ง่ายมาก
+✅ รับรอง MEA / PEA 🇹🇭
+✅ รับประกัน 10 ปี 🛡️
+
+📐 ขนาด: 368×325×145 mm | น้ำหนัก 9.5 kg
+
+#TCLSolar #OnGrid #โซลาร์บ้าน #ลดค่าไฟ`,
+   prompt:"ภาพ: TCL-GS5K-G1 inverter สีขาวสะอาด ติดผนังบ้านภายนอก เห็นแผงโซลาร์บนหลังคาด้านหลัง แสงอาทิตย์สาดส่อง โทนสว่างอบอุ่น มีข้อความ '5kW | MEA/PEA Approved | 10Y Warranty' overlay"},
+  {id:6,pid:6,emoji:"🔌",title:"TCL-BS40-G1 — Switch Box 1 Phase 230V-40A",
+   body:`🛡️ ความปลอดภัยของระบบโซลาร์เริ่มต้นที่ Switch Box ที่ถูกต้อง!
+
+TCL-BS40-G1 Switch Box 1 เฟส ออกแบบ Plug-and-Play ดูแลรักษาง่าย
+
+✅ Plug-and-Play ติดตั้งง่าย ไม่ยุ่งยาก
+✅ Built-in RCD & SPD ป้องกันไฟรั่วและฟ้าผ่า
+✅ IP54 ใช้งานได้ในที่ชื้น
+✅ Worry-free Maintenance ดูแลง่าย
+✅ ใช้ร่วมกับชุด TCL GS5K 1 Phase Set
+✅ รับรองมาตรฐาน CE
+✅ รับประกัน 2 ปี
+
+📐 ขนาด: 280×380×140 mm | น้ำหนัก ≈12 kg
+
+#SwitchBox #TCLSolar #ระบบโซลาร์บ้าน`,
+   prompt:"ภาพ: TCL-BS40-G1 Switch Box สีขาวเรียบ ติดผนังใน utility room มีสายไฟต่อเชื่อมอย่างเป็นระเบียบ โทนสะอาด ปลอดภัย มี icon โล่และข้อความ 'RCD & SPD Built-in | IP54'"},
+  {id:7,pid:7,emoji:"🏢",title:"TCL-GT12K-G1 — Inverter 12kW 3 เฟส",
+   body:`⚡ สำหรับบ้านใหญ่ ออฟฟิศ ร้านค้า — โซลาร์ 3 เฟสที่คุ้มค่าที่สุด!
+
+TCL-GT12K-G1 อินเวอร์เตอร์ On-grid 12kW 3 เฟส ประสิทธิภาพสูงถึง 98.6%
+
+✅ กำลัง 12kW 3 เฟส รองรับโหลดหนัก
+✅ Max PV Input 18,000Wp ต่อแผงได้เยอะ
+✅ MPP Voltage Range 150–1000V ยืดหยุ่นสูง
+✅ PV Oversizing 150% เพิ่มผลผลิตวันฟ้าครึ้ม
+✅ Shadow Scan & Export Limit ครบครัน
+✅ รับรอง MEA / PEA 🇹🇭
+✅ รับประกัน 10 ปี 🛡️
+
+📐 ขนาด: 503×435×183 mm | น้ำหนัก 17 kg
+
+#TCLSolar #3Phase #โซลาร์อาคาร #ธุรกิจ`,
+   prompt:"ภาพ: TCL-GT12K-G1 inverter สีขาว ติดผนังอาคารพาณิชย์ บรรยากาศธุรกิจ เห็นแผงโซลาร์บนหลังคา โทน professional พร้อมข้อความ '12kW | 3-Phase | 98.6% Efficiency | MEA/PEA Approved'"},
+  {id:8,pid:8,emoji:"🔌",title:"TCL-BT50-G1 — Switch Box 3 Phase 400V-50A",
+   body:`🛡️ ป้องกันระบบ 3 เฟสได้อย่างสมบูรณ์แบบ!
+
+TCL-BT50-G1 Switch Box 3 เฟส สำหรับบ้านและอาคารธุรกิจ
+
+✅ รองรับ AC400V 50A ระบบ 3 เฟส
+✅ Plug-and-Play ติดตั้งง่าย
+✅ Built-in RCD & SPD ป้องกันครบ
+✅ IP54 ใช้งานได้ในที่ชื้น
+✅ ใช้ร่วมกับชุด 10kW และ 12kW 3 Phase Set
+✅ รับรองมาตรฐาน CE
+✅ รับประกัน 2 ปี
+
+📐 ขนาด: 360×420×140 mm | น้ำหนัก 15 kg
+
+#SwitchBox #3Phase #TCLSolar`,
+   prompt:"ภาพ: TCL-BT50-G1 Switch Box 3 เฟส สีขาวเรียบ ติดผนัง มีสาย 3 เฟสต่อเรียบร้อย ดูเป็นมืออาชีพ พร้อม badge 'IP54 | CE Certified | 3-Phase'"},
+  {id:9,pid:9,emoji:"🌟",title:"แผงโซลาร์เซลล์ TCL 620W — N-type TOPCon Bifacial",
+   body:`🌞 เทคโนโลยีแผงโซลาร์ระดับ Tier 1 ประสิทธิภาพสูงสุด!
+
+TCL G12R-66P แผง N-type TOPCon Bifacial Double Glass ประสิทธิภาพสูงถึง 23.3%
+
+✅ กำลังสูงสุด 620W ต่อแผง — ใช้แผงน้อยลง ประหยัดหลังคา
+✅ N-type TOPCon เสื่อมสภาพช้ากว่า P-type
+✅ Bifacial รับแสงได้ 2 ด้าน เพิ่มผลผลิต 5–10%
+✅ Double Glass แข็งแรง ทนลูกเห็บ ทนความร้อน
+✅ ทน -40°C ถึง +85°C ใช้ได้ทุกสภาพอากาศ
+✅ Product Warranty 15 ปี 🛡️
+✅ Linear Performance Warranty 30 ปี (เหลือ 87.4% ที่ปีที่ 30)
+
+📐 ขนาด: 2,382×1,134×30 mm | น้ำหนัก 32.6 kg
+
+#TCLSolar #620W #TOPCon #แผงโซลาร์ #Bifacial`,
+   prompt:"ภาพ: แผงโซลาร์เซลล์ TCL 620W สีดำเรียงบนหลังคากระเบื้องบ้านทันสมัย แสงอาทิตย์กำลังส่อง ท้องฟ้าสีฟ้า โทนสว่างสดชื่น มีข้อความ '620W | 23.3% Efficiency | 30Y Warranty' overlay"},
+  {id:10,pid:null,emoji:"🎁",title:"ชุด TCL Solar ครบเซ็ต — On-Grid & Hybrid ราคาดีที่สุด!",
+   body:`🎉 ต้องการระบบโซลาร์เซลล์สำหรับบ้านหรือธุรกิจ?
+TCL Digital Power มีครบทุกอย่างในแบรนด์เดียว!
+
+📦 ชุดสินค้าที่มีจำหน่าย:
+
+⚡ ชุด On-Grid 1 เฟส
+• Inverter GS5K-G1 5kW + Switch Box BS40-G1
+• เหมาะบ้าน 1 เฟส ลดค่าไฟกลางวัน
+
+⚡ ชุด On-Grid 3 เฟส
+• Inverter GT12K-G1 12kW + Switch Box BT50-G1
+• เหมาะบ้านใหญ่/อาคารธุรกิจ
+
+🔋 ชุด Hybrid ESS
+• BlueArk X1 8K-SP + BMH Battery 8kWh
+• เก็บไฟใช้กลางคืน สำรองไฟตอนดับ
+
+🌞 แผงโซลาร์ TCL 620W
+• N-type TOPCon Bifacial คุณภาพ Tier 1
+
+✅ ทุกรุ่นรับรอง MEA/PEA ไทย
+✅ รับประกันยาว 10 ปี (Inverter) / 30 ปี (แผง)
+
+📩 สอบถามราคาแพ็คเกจ inbox ได้เลยครับ!
+📲 ส่งรูปหลังคา + บิลค่าไฟ รับแผนระบบฟรี!
+
+#TCLSolar #โปรโมชั่น #โซลาร์เซลล์ #ลดค่าไฟ`,
+   prompt:"ภาพ collage: แสดงผลิตภัณฑ์ TCL Solar ครบชุด — แผงโซลาร์บนหลังคา, อินเวอร์เตอร์, แบตเตอรี่ BlueArk X1 — ในบ้านทันสมัย โทนสีขาว-น้ำเงิน-เขียว แสดงถึง clean energy มี logo TCL และข้อความ 'Complete Solar Solution' overlay สไตล์ advertising"},
+];
+
+let openPost = null;
+let copiedId = null;
+let copyTimeout = null;
+
+function fmt(n){ return n>0 ? Number(n).toLocaleString('th-TH') + ' บาท' : '—'; }
+function disc(o,s){ if(!o||!s||o<=s) return null; return Math.round((o-s)/o*100); }
+function getPrice(pid){ return prices.find(p=>p.id===pid); }
+
+function buildText(post){
+  const p = post.pid ? getPrice(post.pid) : null;
+  const disc2 = p ? disc(p.orig,p.sale) : null;
+  let priceBlock = '';
+  if(p && p.sale>0){
+    priceBlock = '\n\n💰 ราคาพิเศษ!';
+    if(p.orig>0 && p.orig>p.sale) priceBlock += '\nราคาปกติ ' + fmt(p.orig) + ' ← ขีดทับ';
+    priceBlock += '\n🔥 ราคาลด: ' + fmt(p.sale);
+    if(disc2) priceBlock += ' (ลด '+disc2+'%)';
+  } else if(!post.pid){
+    priceBlock = '\n\n📩 สอบถามราคาแพ็คเกจ inbox ได้เลยครับ!';
+  } else {
+    priceBlock = '\n\n📩 สอบถามราคา inbox ได้เลยครับ!';
+  }
+  return post.body + priceBlock + '\n\n📞 ติดต่อสอบถาม/สั่งซื้อ: inbox หรือโทรหาเราได้เลย!';
+}
+
+function switchTab(tab, el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-posts').style.display = tab==='posts'?'block':'none';
+  document.getElementById('tab-prices').style.display = tab==='prices'?'block':'none';
+}
+
+function togglePost(id){
+  openPost = openPost===id ? null : id;
+  renderPosts();
+}
+
+function copyText(id, text){
+  navigator.clipboard.writeText(text).catch(()=>{});
+  if(copyTimeout) clearTimeout(copyTimeout);
+  copiedId = id;
+  renderPosts();
+  copyTimeout = setTimeout(()=>{ copiedId=null; renderPosts(); }, 2000);
+}
+
+function renderPosts(){
+  const container = document.getElementById('tab-posts');
+  container.innerHTML = posts.map(post=>{
+    const p = post.pid ? getPrice(post.pid) : null;
+    const d = p ? disc(p.orig,p.sale) : null;
+    const isOpen = openPost===post.id;
+    const fullText = buildText(post);
+
+    let priceHtml = '';
+    if(p && p.sale>0){
+      priceHtml = `<div class="price-tag">${p.orig>0&&p.orig>p.sale?`<span class="price-orig">${fmt(p.orig)}</span>`:''}${fmt(p.sale)}${d?`<span class="badge">-${d}%</span>`:''}</div>`;
+    } else {
+      priceHtml = `<div style="font-size:12px;color:var(--color-text-tertiary,#999);margin-top:2px">${post.pid?'ยังไม่ได้กรอกราคา':'สอบถามราคา'}</div>`;
+    }
+
+    return `<div class="card">
+      <div class="card-header" onclick="togglePost(${post.id})">
+        <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0">
+          <span style="font-size:18px">${post.emoji}</span>
+          <div style="min-width:0">
+            <div class="post-title">โพส ${post.id}: ${post.title}</div>
+            ${priceHtml}
+          </div>
+        </div>
+        <span class="chevron${isOpen?' open':''}">▼</span>
+      </div>
+      ${isOpen?`<div class="card-body">
+        <div class="post-text">${escHtml(fullText)}</div>
+        <div class="prompt-box">
+          <div class="prompt-label">🖼️ Image Prompt สำหรับ AI Image Generator (Midjourney/DALL-E/Ideogram):</div>
+          <div class="prompt-text">${escHtml(post.prompt)}</div>
+        </div>
+        <div class="btn-row">
+          <button class="action" onclick="copyText('post-${post.id}',${JSON.stringify(fullText)})">${copiedId==='post-'+post.id?'✓ คัดลอกแล้ว':'📋 คัดลอกข้อความโพส'}</button>
+          <button class="action" onclick="copyText('prompt-${post.id}',${JSON.stringify(post.prompt)})">${copiedId==='prompt-'+post.id?'✓ คัดลอกแล้ว':'🖼️ คัดลอก Image Prompt'}</button>
+        </div>
+      </div>`:''
+    }</div>`;
+  }).join('');
+}
+
+function escHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function renderPrices(){
+  const container = document.getElementById('tab-prices');
+  container.innerHTML = `<p class="hint">กรอกราคาเพื่อแสดงในโพส — "ราคาปกติ" จะแสดงขีดทับ, "ราคาลด" คือราคา TikTok / ต้นทุน</p>` +
+  prices.map(p=>{
+    const d = disc(p.orig,p.sale);
+    return `<div class="card" style="padding:1rem 1.25rem;margin-bottom:10px">
+      <div style="font-weight:500;font-size:14px;margin-bottom:10px">${p.id}. ${p.name}</div>
+      <div class="price-row">
+        <div>
+          <label class="price-label">ราคาปกติ (บาท) — แสดงขีดทับ</label>
+          <input type="number" placeholder="เช่น 35000" value="${p.orig||''}" oninput="updatePrice(${p.id},'orig',this.value)">
+        </div>
+        <div>
+          <label class="price-label">ราคาลด / ราคา TikTok (บาท)</label>
+          <input type="number" placeholder="เช่น 29000" value="${p.sale||''}" oninput="updatePrice(${p.id},'sale',this.value)">
+        </div>
+      </div>
+      ${p.orig>0&&p.sale>0&&p.orig>p.sale?`<div class="savings">✓ ลด ${d}% — ประหยัด ${fmt(p.orig-p.sale)}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function updatePrice(id, field, val){
+  const p = prices.find(x=>x.id===id);
+  if(p){ p[field] = Number(val)||0; }
+  renderPrices();
+  if(openPost!==null) renderPosts();
+}
+
+renderPosts();
+renderPrices();
+</script>
+</body>
+</html>
